@@ -9,7 +9,7 @@ import * as MediaLibrary from 'expo-media-library';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 
-export default function App() {
+export default function Cameraa() {
   let cameraRef = useRef();
   const [hasCameraPermission, setHasCameraPermission] = useState();
   const [hasMediaLibraryPermission, setHasMediaLibraryPermission] = useState();
