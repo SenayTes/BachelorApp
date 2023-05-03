@@ -111,6 +111,9 @@ export default function App() {
   }
   return (
     <SafeAreaView style={styles.container}>
+        <Text style={styles.textGy}>x: {x}</Text>
+        <Text style={styles.textGy}>y: {y}</Text>
+        <Text style={styles.textGy}>z: {z}</Text>
         <Camera style={{aspectRatio: '3/4'}} ref={cameraRef}>
           <Svg height="100%" width="100%">
           <Circle
@@ -131,10 +134,8 @@ export default function App() {
             strokeWidth="4"
             ref={setSecondCircleRef}
           />
+          </Svg>
           <View style={styles.buttonContainer}>
-              <Text style={styles.textGy}>x: {x}</Text>
-              <Text style={styles.textGy}>y: {y}</Text>
-              <Text style={styles.textGy}>z: {z}</Text>
               <TouchableOpacity
               onPress={subsciption ? _unsubscribe : _subscribe}
               style={styles.button}>
@@ -152,7 +153,6 @@ export default function App() {
                 <Icon name="camera" size={50} color="white"/>
               </TouchableOpacity> 
           </View>
-          </Svg>
           <StatusBar style="auto"/>
         </Camera>
     </SafeAreaView>
@@ -162,9 +162,10 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 90,
+    alignItems: 'center',
+    marginTop: -150,
+
   },
   buttonContainer: {
     flexDirection: 'row',
