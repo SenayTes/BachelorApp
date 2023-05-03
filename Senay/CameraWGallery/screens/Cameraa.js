@@ -7,45 +7,14 @@ import {Camera} from 'expo-camera';
 import {shareAsync} from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Svg, Circle } from 'react-native-svg';
-import { Gyroscope } from 'expo-sensors';
+import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 
-export default function App() {
+export default function Cameraa() {
   let cameraRef = useRef();
   const [hasCameraPermission, setHasCameraPermission] = useState();
   const [hasMediaLibraryPermission, setHasMediaLibraryPermission] = useState();
-  const [firstCircleRef, setFirstCircleRef] = useState(null);
-  const [secondCircleRef, setSecondCircleRef] = useState(null);
   const[photo, setPhoto] = useState();
 
-  const [{x, y, z }, setData] = useState({
-    x: 0,
-    y:0,
-    z:0,
-  });
-
-  const [subsciption, setSubsciption] = useState(null);
-
-  const _slow = () => Gyroscope.setUpdateInterval(1000);
-  const _fast = () => Gyroscope.setUpdateInterval(16);
-
-  const _subscribe = () => {
-    setSubsciption(
-      Gyroscope.addListener(GyroscopeData => {
-        setData(GyroscopeData);
-      })
-    );
-  };
-  const _unsubscribe = () => {
-    subsciption && subsciption.remove();
-    setSubsciption(null);
-  };
-  
-  useEffect(() => {
-    _subscribe();
-    return () => _unsubscribe();
-  }, []);
-  
   useEffect(() => {
     (async () => {
         const cameraPermission = await Camera.requestCameraPermissionsAsync();
@@ -109,50 +78,17 @@ export default function App() {
       </SafeAreaView>
     );
   }
+
   return (
     <SafeAreaView style={styles.container}>
         <Camera style={{aspectRatio: '3/4'}} ref={cameraRef}>
-          <Svg height="100%" width="100%">
-          <Circle
-            cx="50%"
-            cy="50%"
-            r="100"
-            fill="none"
-            stroke="blue"
-            strokeWidth="4"
-            ref={setFirstCircleRef}
-          />
-          <Circle
-            cx="50%"
-            cy="50%"
-            r="200"
-            fill="none"
-            stroke="red"
-            strokeWidth="4"
-            ref={setSecondCircleRef}
-          />
           <View style={styles.buttonContainer}>
-              <Text style={styles.textGy}>x: {x}</Text>
-              <Text style={styles.textGy}>y: {y}</Text>
-              <Text style={styles.textGy}>z: {z}</Text>
-              <TouchableOpacity
-              onPress={subsciption ? _unsubscribe : _subscribe}
-              style={styles.button}>
-              <Text>{subsciption ? 'On' : 'off'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-              onPress={_slow}
-              style={[styles.button, styles.middleButton]}>
-              <Text>{subsciption ? 'On' : 'off'}</Text>
-              </TouchableOpacity>
-              <Text style={styles.textGy}>Gyroscope</Text>
-              <TouchableOpacity
-                style={styles.button}
-                onPress={takePic}>
-                <Icon name="camera" size={50} color="white"/>
-              </TouchableOpacity> 
+          <TouchableOpacity
+              style={styles.button}
+              onPress={takePic}>
+              <Icon name="camera" size={50} color="white"/>
+            </TouchableOpacity> 
           </View>
-          </Svg>
           <StatusBar style="auto"/>
         </Camera>
     </SafeAreaView>
@@ -193,8 +129,5 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 10,
     marginBottom: 0,
-  },
-  textGy: {
-    textAlign: 'center'
   },
 });
