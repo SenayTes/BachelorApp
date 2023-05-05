@@ -1,7 +1,6 @@
 import { StyleSheet, Text, View, Button, Image, TouchableOpacity,SafeAreaView, ImageBackground} from 'react-native';
 import React from 'react';
 import { TextInput } from 'react-native-paper';
-
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 
 export default function Register({navigation}){

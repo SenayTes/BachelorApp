@@ -7,7 +7,7 @@ import {Camera} from 'expo-camera';
 import {shareAsync} from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+//import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 
 export default function Cameraa() {
   let cameraRef = useRef();
