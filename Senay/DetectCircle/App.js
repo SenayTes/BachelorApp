@@ -8,7 +8,14 @@ import {shareAsync} from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Svg, Circle } from 'react-native-svg';
-import { Gyroscope } from 'expo-sensors';
+import { Accelerometer, Gyroscope } from 'expo-sensors';
+
+const ANGLE_RANGE = 5; // Allow a 5-degree range around 90 degrees
+const Z_THRESHOLD = 0.8; // Require the z-axis value to be above 0.8 for the gyroscope
+const MIN_ANGLE = 85; // degrees
+const MAX_ANGLE = 95; // degrees
+const alpha = 0.98; // Weighting factor for gyroscope data
+const beta = 1 - alpha; // Weighting factor for accelerometer dat
 
 export default function App() {
   let cameraRef = useRef();
@@ -17,35 +24,66 @@ export default function App() {
   const [firstCircleRef, setFirstCircleRef] = useState(null);
   const [secondCircleRef, setSecondCircleRef] = useState(null);
   const[photo, setPhoto] = useState();
-
+  const [isAt90Degrees, setIsAt90Degrees] = useState(false);
+  const [adjustment, setAdjustment] = useState(0);
   const [{x, y, z }, setData] = useState({
     x: 0,
     y:0,
     z:0,
   });
 
-  const [subsciption, setSubsciption] = useState(null);
-
-  const _slow = () => Gyroscope.setUpdateInterval(1000);
-  const _fast = () => Gyroscope.setUpdateInterval(16);
-
-  const _subscribe = () => {
-    setSubsciption(
-      Gyroscope.addListener(GyroscopeData => {
-        setData(GyroscopeData);
-      })
-    );
-  };
-  const _unsubscribe = () => {
-    subsciption && subsciption.remove();
-    setSubsciption(null);
-  };
   
   useEffect(() => {
-    _subscribe();
-    return () => _unsubscribe();
-  }, []);
+    let prevAngle = 0;
+    let prevTimestamp = 0;
+    let gyroAngle = 0;
   
+    const accelerometerSubscription = Accelerometer.addListener(({ x, y, z, timestamp }) => {
+      const accAngle = Math.atan2(y, x) * (180 / Math.PI) - adjustment;
+      const dt = (timestamp - prevTimestamp) / 1000; // Convert to seconds
+      prevTimestamp = timestamp;
+  
+      // Low-pass filter on accelerometer data
+      const accAngleFiltered = beta * accAngle + alpha * gyroAngle;
+  
+      const isAt90Degrees = Math.abs(accAngleFiltered - 90) <= ANGLE_RANGE
+        && Math.abs(z) >= Z_THRESHOLD
+        && accAngleFiltered >= MIN_ANGLE
+        && accAngleFiltered <= MAX_ANGLE;
+  
+      setIsAt90Degrees(isAt90Degrees);
+      console.log('Angle:', accAngleFiltered);
+  
+      prevAngle = accAngleFiltered;
+    });
+  
+    const gyroscopeSubscription = Gyroscope.addListener(({ x, y, z, timestamp }) => {
+      const dt = (timestamp - prevTimestamp) / 1000; // Convert to seconds
+      prevTimestamp = timestamp;
+  
+      // High-pass filter on gyroscope data
+      const rateOfChange = (y / 131) * (Math.PI / 180); // Convert to radians per second
+      gyroAngle += rateOfChange * dt;
+  
+      prevAngle = beta * prevAngle + alpha * gyroAngle;
+    });
+  
+    return () => {
+      accelerometerSubscription.remove();
+      gyroscopeSubscription.remove();
+    };
+  }, []);
+
+  // If the device is at 90 degrees in both x and y axes, change the line colors to green, otherwise to red
+  const lineStyles = {
+    horizontalLine: {
+      backgroundColor: isAt90Degrees ? 'green' : 'red',
+    },
+    verticalLine: {
+      backgroundColor: isAt90Degrees ? 'green' : 'red',
+    },
+  };
+
   useEffect(() => {
     (async () => {
         const cameraPermission = await Camera.requestCameraPermissionsAsync();
@@ -115,7 +153,9 @@ export default function App() {
         <Text style={styles.textGy}>y: {y}</Text>
         <Text style={styles.textGy}>z: {z}</Text>
         <Camera style={{aspectRatio: '3/4'}} ref={cameraRef}>
-          <Svg height="100%" width="100%">
+           <View style={[styles.line, styles.horizontalLine, lineStyles.horizontalLine]} />
+           <View style={[styles.line, styles.verticalLine, lineStyles.verticalLine]} />
+          <Svg height="100%" width="100%">  
           <Circle
             cx="50%"
             cy="50%"
@@ -125,6 +165,7 @@ export default function App() {
             strokeWidth="4"
             ref={setFirstCircleRef}
           />
+          
           <Circle
             cx="50%"
             cy="50%"
@@ -136,17 +177,6 @@ export default function App() {
           />
           </Svg>
           <View style={styles.buttonContainer}>
-              <TouchableOpacity
-              onPress={subsciption ? _unsubscribe : _subscribe}
-              style={styles.button}>
-              <Text>{subsciption ? 'On' : 'off'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-              onPress={_slow}
-              style={[styles.button, styles.middleButton]}>
-              <Text>{subsciption ? 'On' : 'off'}</Text>
-              </TouchableOpacity>
-              <Text style={styles.textGy}>Gyroscope</Text>
               <TouchableOpacity
                 style={styles.button}
                 onPress={takePic}>
@@ -164,7 +194,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: -150,
+    marginTop: -100,
 
   },
   buttonContainer: {
@@ -197,5 +227,30 @@ const styles = StyleSheet.create({
   },
   textGy: {
     textAlign: 'center'
+  },
+
+  line: {
+    position: 'absolute',
+  },
+  horizontalLine: {
+    height: 1,
+    width: '10%',
+    top: '50%',
+    transformOrigin: 'center center',
+    marginLeft: 520,
+  },
+  verticalLine: {
+    height: '7%',
+    width: 1,
+    left: '50%',
+    transformOrigin: 'center center',
+    marginTop: 720,
+  },
+  adjustment: {
+    position: 'absolute',
+    bottom: 50,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
   },
 });

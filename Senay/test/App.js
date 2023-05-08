@@ -2,7 +2,10 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Camera } from 'expo-camera';
-import { Accelerometer } from 'expo-sensors';
+import { Accelerometer, Gyroscope } from 'expo-sensors';
+
+const ANGLE_RANGE = 5; // Allow a 5-degree range around 90 degrees
+const Z_THRESHOLD = 0.8; // Require the z-axis value to be above 0.8 for the gyroscope
 
 export default function App() {
   const [hasPermission, setHasPermission] = useState(null);
@@ -17,14 +20,21 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const subscription = Accelerometer.addListener(({ x, y, z }) => {
-      const angle = Math.atan2(y, x) * (180 / Math.PI);
-      setIsAt90Degrees(angle >= 85 - adjustment && angle <= 95 + adjustment);
+    const accelerometerSubscription = Accelerometer.addListener(({ x, y, z }) => {
+      const angle = Math.atan2(y, x) * (180 / Math.PI) - adjustment;
+      setIsAt90Degrees(Math.abs(angle - 90) <= ANGLE_RANGE);
       console.log('Angle:', angle);
     });
 
+    /* const gyroscopeSubscription = Gyroscope.addListener(({ x, y, z }) => {
+      const angle = Math.atan2(y, x) * (180 / Math.PI) - adjustment;
+      setIsAt90Degrees(Math.abs(angle - 90) <= ANGLE_RANGE && Math.abs(z) >= Z_THRESHOLD);
+      console.log('Angle:', angle);
+    });
+ */
     return () => {
-      subscription && subscription.remove();
+      accelerometerSubscription && accelerometerSubscription.remove();
+      //gyroscopeSubscription && gyroscopeSubscription.remove();
     };
   }, [adjustment]);
 
@@ -36,11 +46,6 @@ export default function App() {
     verticalLine: {
       backgroundColor: isAt90Degrees ? 'green' : 'red',
     },
-  };
-
-  // Function to handle calibration button press
-  const handleCalibratePress = () => {
-    setAdjustment(0);
   };
 
   if (hasPermission === null) {
@@ -58,15 +63,11 @@ export default function App() {
       </Camera>
       <View style={styles.adjustment}>
         <Text>Adjustment: {adjustment}</Text>
-        <TouchableOpacity onPress={handleCalibratePress}>
-          <Text>Calibrate</Text>
-        </TouchableOpacity>
       </View>
       <StatusBar style="auto" />
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
