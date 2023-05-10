@@ -14,8 +14,6 @@ const ANGLE_RANGE = 5; // Allow a 5-degree range around 90 degrees
 const Z_THRESHOLD = 0.8; // Require the z-axis value to be above 0.8 for the gyroscope
 const MIN_ANGLE = 85; // degrees
 const MAX_ANGLE = 95; // degrees
-const alpha = 0.98; // Weighting factor for gyroscope data
-const beta = 1 - alpha; // Weighting factor for accelerometer dat
 
 export default function App() {
   let cameraRef = useRef();
@@ -33,46 +31,24 @@ export default function App() {
   });
 
   
-  useEffect(() => {
-    let prevAngle = 0;
-    let prevTimestamp = 0;
-    let gyroAngle = 0;
-  
-    const accelerometerSubscription = Accelerometer.addListener(({ x, y, z, timestamp }) => {
-      const accAngle = Math.atan2(y, x) * (180 / Math.PI) - adjustment;
-      const dt = (timestamp - prevTimestamp) / 1000; // Convert to seconds
-      prevTimestamp = timestamp;
-  
-      // Low-pass filter on accelerometer data
-      const accAngleFiltered = beta * accAngle + alpha * gyroAngle;
-  
-      const isAt90Degrees = Math.abs(accAngleFiltered - 90) <= ANGLE_RANGE
-        && Math.abs(z) >= Z_THRESHOLD
-        && accAngleFiltered >= MIN_ANGLE
-        && accAngleFiltered <= MAX_ANGLE;
-  
-      setIsAt90Degrees(isAt90Degrees);
-      console.log('Angle:', accAngleFiltered);
-  
-      prevAngle = accAngleFiltered;
-    });
-  
-    const gyroscopeSubscription = Gyroscope.addListener(({ x, y, z, timestamp }) => {
-      const dt = (timestamp - prevTimestamp) / 1000; // Convert to seconds
-      prevTimestamp = timestamp;
-  
-      // High-pass filter on gyroscope data
-      const rateOfChange = (y / 131) * (Math.PI / 180); // Convert to radians per second
-      gyroAngle += rateOfChange * dt;
-  
-      prevAngle = beta * prevAngle + alpha * gyroAngle;
-    });
-  
-    return () => {
-      accelerometerSubscription.remove();
-      gyroscopeSubscription.remove();
-    };
-  }, []);
+useEffect(() => {
+  /* const accelerometerSubscription = Accelerometer.addListener(({ x, y, z }) => {
+    const angle = Math.atan2(x, -y) * (180 / Math.PI) - adjustment;
+    setIsAt90Degrees(Math.abs(angle - 90) <= ANGLE_RANGE && angle >= MIN_ANGLE && angle <= MAX_ANGLE);
+    console.log('Angle:', angle);
+  }); */
+
+  const gyroscopeSubscription = Gyroscope.addListener(({ x, y, z }) => {
+    const angle = Math.atan2(x, -y) * (180 / Math.PI) - adjustment;
+    setIsAt90Degrees(Math.abs(angle - 90) <= ANGLE_RANGE && Math.abs(z) >= Z_THRESHOLD && angle >= MIN_ANGLE && angle <= MAX_ANGLE);
+    console.log('Angle:', angle);
+  });
+
+  return () => {
+/*     accelerometerSubscription.remove();
+ */    gyroscopeSubscription.remove();
+  };
+}, []);
 
   // If the device is at 90 degrees in both x and y axes, change the line colors to green, otherwise to red
   const lineStyles = {
@@ -130,6 +106,9 @@ export default function App() {
       <SafeAreaView style={styles.container}>
         <Image style={styles.preview} source={{uri: "data:image/jpg;base64," + photo.base64 }} />
         <View style={styles.btnContainer}>
+        <Camera style={{aspectRatio: '3/4'}} ref={cameraRef}>
+          <StatusBar style="auto"/>
+        </Camera>
         <TouchableOpacity  
           onPress={sharePic}> 
           <Icon name="share" size={50} color="grey"/>
@@ -153,31 +132,34 @@ export default function App() {
         <Text style={styles.textGy}>y: {y}</Text>
         <Text style={styles.textGy}>z: {z}</Text>
         <Camera style={{aspectRatio: '3/4'}} ref={cameraRef}>
-           <View style={[styles.line, styles.horizontalLine, lineStyles.horizontalLine]} />
-           <View style={[styles.line, styles.verticalLine, lineStyles.verticalLine]} />
-          <Svg height="100%" width="100%">  
-          <Circle
-            cx="50%"
-            cy="50%"
-            r="100"
-            fill="none"
-            stroke="blue"
-            strokeWidth="4"
-            ref={setFirstCircleRef}
-          />
+
+          {/*  <View style={[styles.line, styles.horizontalLine, lineStyles.horizontalLine]} />
+           <View style={[styles.line, styles.verticalLine, lineStyles.verticalLine]} /> */}
           
-          <Circle
-            cx="50%"
-            cy="50%"
-            r="200"
-            fill="none"
-            stroke="red"
-            strokeWidth="4"
-            ref={setSecondCircleRef}
-          />
-          </Svg>
-          <View style={styles.buttonContainer}>
-              <TouchableOpacity
+            <View style={styles.circl_container}>
+              <Svg height="100%" width="100%">  
+              <Circle
+                cx="50%"
+                cy="50%"
+                r="100"
+                fill="none"
+                stroke="blue"
+                strokeWidth="4"
+                ref={setFirstCircleRef}
+              />
+              <Circle
+                cx="50%"
+                cy="50%"
+                r="200"
+                fill="none"
+                stroke="red"
+                strokeWidth="4"
+                ref={setSecondCircleRef}
+              />
+              </Svg>
+            </View>
+            <View style={styles.buttonContainer}> 
+            <TouchableOpacity
                 style={styles.button}
                 onPress={takePic}>
                 <Icon name="camera" size={50} color="white"/>
@@ -198,9 +180,8 @@ const styles = StyleSheet.create({
 
   },
   buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 600,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   btnContainer: {
     flexDirection: 'row',
@@ -222,17 +203,22 @@ const styles = StyleSheet.create({
   },
   button: {
     borderRadius: 10,
-    padding: 10,
-    marginBottom: 0,
+    padding: 5,
+    marginTop: 0,
   },
   textGy: {
     textAlign: 'center'
   },
-
-  line: {
-    position: 'absolute',
+  circl_container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  horizontalLine: {
+
+ /*  line: {
+    position: 'absolute',
+  }, */
+  /* horizontalLine: {
     height: 1,
     width: '10%',
     top: '50%',
@@ -252,5 +238,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-  },
+  }, */
 });
+

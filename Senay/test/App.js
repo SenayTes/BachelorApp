@@ -2,16 +2,16 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Camera } from 'expo-camera';
-import { Accelerometer, Gyroscope } from 'expo-sensors';
-
-const ANGLE_RANGE = 5; // Allow a 5-degree range around 90 degrees
-const Z_THRESHOLD = 0.8; // Require the z-axis value to be above 0.8 for the gyroscope
+import { Accelerometer } from 'expo-sensors';
 
 export default function App() {
   const [hasPermission, setHasPermission] = useState(null);
   const [isAt90Degrees, setIsAt90Degrees] = useState(false);
   const [adjustment, setAdjustment] = useState(0);
- 
+  const [roll, setRoll] = useState(0);
+  const [pitch, setPitch] = useState(0);
+  const [yaw, setYaw] = useState(0);
+
   useEffect(() => {
     (async () => {
       const { status } = await Camera.requestCameraPermissionsAsync();
@@ -20,21 +20,22 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const accelerometerSubscription = Accelerometer.addListener(({ x, y, z }) => {
-      const angle = Math.atan2(y, x) * (180 / Math.PI) - adjustment;
-      setIsAt90Degrees(Math.abs(angle - 90) <= ANGLE_RANGE);
-      console.log('Angle:', angle);
+    const subscription = Accelerometer.addListener(({ x, y, z }) => {
+      const roll = Math.atan2(y, z) * (180 / Math.PI);
+      const pitch = Math.atan2(-x, Math.sqrt(y * y + z * z)) * (180 / Math.PI);
+      const yaw = Math.atan2(-z, y) * (180 / Math.PI);
+      setRoll(roll);
+      setPitch(pitch);
+      setYaw(yaw);
+      setIsAt90Degrees(
+        roll >= 85 - adjustment && roll <= 95 + adjustment &&
+        pitch >= 85 - adjustment && pitch <= 95 + adjustment
+      );
+      console.log('Roll:', roll.toFixed(2), 'Pitch:', pitch.toFixed(2), 'Yaw:', yaw.toFixed(2));
     });
 
-    /* const gyroscopeSubscription = Gyroscope.addListener(({ x, y, z }) => {
-      const angle = Math.atan2(y, x) * (180 / Math.PI) - adjustment;
-      setIsAt90Degrees(Math.abs(angle - 90) <= ANGLE_RANGE && Math.abs(z) >= Z_THRESHOLD);
-      console.log('Angle:', angle);
-    });
- */
     return () => {
-      accelerometerSubscription && accelerometerSubscription.remove();
-      //gyroscopeSubscription && gyroscopeSubscription.remove();
+      subscription && subscription.remove();
     };
   }, [adjustment]);
 
@@ -46,6 +47,11 @@ export default function App() {
     verticalLine: {
       backgroundColor: isAt90Degrees ? 'green' : 'red',
     },
+  };
+
+  // Function to handle calibration button press
+  const handleCalibratePress = () => {
+    setAdjustment(0);
   };
 
   if (hasPermission === null) {
@@ -63,11 +69,15 @@ export default function App() {
       </Camera>
       <View style={styles.adjustment}>
         <Text>Adjustment: {adjustment}</Text>
+        <TouchableOpacity onPress={handleCalibratePress}>
+          <Text>Calibrate</Text>
+        </TouchableOpacity>
       </View>
       <StatusBar style="auto" />
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
