@@ -141,7 +141,7 @@ useEffect(() => {
               <Circle
                 cx="50%"
                 cy="50%"
-                r="100"
+                r="70"
                 fill="none"
                 stroke="blue"
                 strokeWidth="4"
@@ -150,7 +150,7 @@ useEffect(() => {
               <Circle
                 cx="50%"
                 cy="50%"
-                r="200"
+                r="140"
                 fill="none"
                 stroke="red"
                 strokeWidth="4"

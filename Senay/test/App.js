@@ -1,8 +1,9 @@
+import React, { useState, useEffect, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Animated } from 'react-native';
 import { Camera } from 'expo-camera';
-import { Accelerometer } from 'expo-sensors';
+import { Accelerometer, Gyroscope } from 'expo-sensors';
+import _ from 'lodash';
 
 export default function App() {
   const [hasPermission, setHasPermission] = useState(null);
@@ -10,7 +11,15 @@ export default function App() {
   const [adjustment, setAdjustment] = useState(0);
   const [roll, setRoll] = useState(0);
   const [pitch, setPitch] = useState(0);
-  const [yaw, setYaw] = useState(0);
+  const [yaw, setYaw] = useState(0);  // New yaw state
+  const [feedback, setFeedback] = useState('');
+  const rollAnim = new Animated.Value(0);
+  const [smoothedRoll, setSmoothedRoll] = useState(0);
+  const [smoothedPitch, setSmoothedPitch] = useState(0);
+  const [rollBuffer, setRollBuffer] = useState([]);
+  const [pitchBuffer, setPitchBuffer] = useState([]);
+
+  const BUFFER_SIZE = 5; // Use last 5 readings for smoothing
 
   useEffect(() => {
     (async () => {
@@ -20,39 +29,86 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const subscription = Accelerometer.addListener(({ x, y, z }) => {
-      const roll = Math.atan2(y, z) * (180 / Math.PI);
-      const pitch = Math.atan2(-x, Math.sqrt(y * y + z * z)) * (180 / Math.PI);
-      const yaw = Math.atan2(-z, y) * (180 / Math.PI);
-      setRoll(roll);
-      setPitch(pitch);
-      setYaw(yaw);
-      setIsAt90Degrees(
-        roll >= 85 - adjustment && roll <= 95 + adjustment &&
-        pitch >= 85 - adjustment && pitch <= 95 + adjustment
-      );
-      console.log('Roll:', roll.toFixed(2), 'Pitch:', pitch.toFixed(2), 'Yaw:', yaw.toFixed(2));
+    // New subscription for gyroscope
+    let gyroSubscription = null;
+    let lastUpdate = Date.now();
+    const updateInterval = 100;  // Adjust this to change the update frequency
+
+    gyroSubscription = Gyroscope.addListener(({ x, y, z }) => {
+      const currentTime = Date.now();
+      const dt = (currentTime - lastUpdate) / 1000.0;  // Time since last update in seconds
+      lastUpdate = currentTime;
+      setYaw((yaw + z * dt) % 360);  // Add rotation speed to yaw, modulus to keep it within 0-360
     });
+
+    Gyroscope.setUpdateInterval(updateInterval);
+
+    return () => {
+      gyroSubscription && gyroSubscription.remove();
+    };
+  }, [yaw]);
+  useEffect(() => {
+    const subscription = Accelerometer.addListener(
+      _.debounce(({ x, y, z }) => {
+        const roll = Math.atan2(y, z) * (180 / Math.PI);
+        const pitch = Math.atan2(-x, Math.sqrt(y * y + z * z)) * (180 / Math.PI);
+
+        // For smoothing
+        let newRollBuffer = [...rollBuffer, roll];
+        let newPitchBuffer = [...pitchBuffer, pitch];
+        if(newRollBuffer.length > BUFFER_SIZE) newRollBuffer.shift();
+        if(newPitchBuffer.length > BUFFER_SIZE) newPitchBuffer.shift();
+        const avgRoll = newRollBuffer.reduce((a, b) => a + b) / newRollBuffer.length;
+        const avgPitch = newPitchBuffer.reduce((a, b) => a + b) / newPitchBuffer.length;
+
+        setRollBuffer(newRollBuffer);
+        setPitchBuffer(newPitchBuffer);
+        setSmoothedRoll(avgRoll);
+        setSmoothedPitch(avgPitch);
+
+        Animated.timing(rollAnim, {
+          toValue: avgRoll,
+          duration: 500,
+          useNativeDriver: false,
+        }).start();
+
+        setRoll(avgRoll);
+        setPitch(avgPitch);
+        setIsAt90Degrees(
+          avgRoll >= 85 - adjustment && avgRoll <= 95 + adjustment &&
+          avgPitch >= -5 - adjustment && avgPitch <= 5 + adjustment
+        );
+
+        if(avgRoll < 85 - adjustment) {
+          setFeedback('Rotate Clockwise');
+        } else if (avgRoll > 95 + adjustment) {
+          setFeedback('Rotate Counter Clockwise');
+        } else {
+          setFeedback('Good! Hold this position');
+        }
+        setTimeout(() => {
+          console.log('Smoothed Roll:', avgRoll.toFixed(2), 'Smoothed Pitch:', avgPitch.toFixed(2));
+        }, 1000);        
+       
+      }, 0) // Debounce time in ms
+    );
 
     return () => {
       subscription && subscription.remove();
     };
+  }, [adjustment, rollAnim, rollBuffer, pitchBuffer]);
+
+  const handleCalibratePress = useCallback(() => {
+    setAdjustment(0);
+  }, []);
+
+  const handleIncreaseAdjustment = useCallback(() => {
+    setAdjustment(adjustment + 1);
   }, [adjustment]);
 
-  // If the device is at 90 degrees in both x and y axes, change the line colors to green, otherwise to red
-  const lineStyles = {
-    horizontalLine: {
-      backgroundColor: isAt90Degrees ? 'green' : 'red',
-    },
-    verticalLine: {
-      backgroundColor: isAt90Degrees ? 'green' : 'red',
-    },
-  };
-
-  // Function to handle calibration button press
-  const handleCalibratePress = () => {
-    setAdjustment(0);
-  };
+  const handleDecreaseAdjustment = useCallback(() => {
+    setAdjustment(adjustment - 1);
+  }, [adjustment]);
 
   if (hasPermission === null) {
     return <View />;
@@ -64,50 +120,78 @@ export default function App() {
   return (
     <View style={styles.container}>
       <Camera style={styles.camera}>
-        <View style={[styles.line, styles.horizontalLine, lineStyles.horizontalLine]} />
-        <View style={[styles.line, styles.verticalLine, lineStyles.verticalLine]} />
+      <Animated.View 
+        style={[
+          styles.line, 
+          styles.horizontalLine, 
+          { backgroundColor: isAt90Degrees ? 'green' : 'red' },
+          { transform: [{ rotateZ: rollAnim.interpolate({
+                  inputRange: [0, 360],
+                  outputRange: ['0deg', '360deg'],
+              }) }] }
+        ]} 
+      />
+        <View style={[styles.line, styles.verticalLine, { backgroundColor: isAt90Degrees ? 'green' : 'red' }]} />
+        <Text style={[styles.feedback, isAt90Degrees ? styles.feedbackGood : styles.feedbackAdjust]}>{feedback}</Text>
       </Camera>
       <View style={styles.adjustment}>
-        <Text>Adjustment: {adjustment}</Text>
-        <TouchableOpacity onPress={handleCalibratePress}>
-          <Text>Calibrate</Text>
-        </TouchableOpacity>
+      <Text>Adjustment: {adjustment}</Text>
+      <TouchableOpacity onPress={handleCalibratePress}>
+        <Text>Calibrate</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={handleIncreaseAdjustment}>
+        <Text>Increase Adjustment</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={handleDecreaseAdjustment}>
+        <Text>Decrease Adjustment</Text>
+      </TouchableOpacity>
       </View>
       <StatusBar style="auto" />
-    </View>
-  );
-}
+      </View>
+      );
+      }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#25292e',
-  },
-  camera: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  line: {
-    position: 'absolute',
-  },
-  horizontalLine: {
-    height: 1,
-    width: '50%',
-    top: '50%',
-    transformOrigin: 'center center',
-  },
-  verticalLine: {
-    height: '25%',
-    width: 1,
-    left: '50%',
-    transformOrigin: 'center center',
-  },
-  adjustment: {
-    position: 'absolute',
-    bottom: 50,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-});
+      const styles = StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: '#25292e',
+        },
+        camera: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        line: {
+          position: 'absolute',
+        },
+        horizontalLine: {
+          height: 1,
+          width: '50%',
+          top: '50%',
+        },
+        verticalLine: {
+          height: '25%',
+          width: 1,
+          left: '50%',
+        },
+        adjustment: {
+          position: 'absolute',
+          bottom: 50,
+          left: 0,
+          right: 0,
+          alignItems: 'center',
+          backgroundColor: 'white',
+        },
+        feedback: {
+          position: 'absolute',
+          bottom: 20,
+          color: 'white',
+          fontSize: 20,
+        },
+        feedbackGood: {
+          color: 'green',
+        },
+        feedbackAdjust: {
+          color: 'red',
+        },
+      });
