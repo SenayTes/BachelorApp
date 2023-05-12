@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, TouchableOpacity, Animated } from 'react-native';
 import { Camera } from 'expo-camera';
-import { Accelerometer, Gyroscope } from 'expo-sensors';
+import { Accelerometer } from 'expo-sensors';
 import _ from 'lodash';
 
 export default function App() {
@@ -11,13 +11,13 @@ export default function App() {
   const [adjustment, setAdjustment] = useState(0);
   const [roll, setRoll] = useState(0);
   const [pitch, setPitch] = useState(0);
-  const [yaw, setYaw] = useState(0);  // New yaw state
   const [feedback, setFeedback] = useState('');
   const rollAnim = new Animated.Value(0);
   const [smoothedRoll, setSmoothedRoll] = useState(0);
   const [smoothedPitch, setSmoothedPitch] = useState(0);
   const [rollBuffer, setRollBuffer] = useState([]);
   const [pitchBuffer, setPitchBuffer] = useState([]);
+
 
   const BUFFER_SIZE = 5; // Use last 5 readings for smoothing
 
@@ -28,25 +28,6 @@ export default function App() {
     })();
   }, []);
 
-  useEffect(() => {
-    // New subscription for gyroscope
-    let gyroSubscription = null;
-    let lastUpdate = Date.now();
-    const updateInterval = 100;  // Adjust this to change the update frequency
-
-    gyroSubscription = Gyroscope.addListener(({ x, y, z }) => {
-      const currentTime = Date.now();
-      const dt = (currentTime - lastUpdate) / 1000.0;  // Time since last update in seconds
-      lastUpdate = currentTime;
-      setYaw((yaw + z * dt) % 360);  // Add rotation speed to yaw, modulus to keep it within 0-360
-    });
-
-    Gyroscope.setUpdateInterval(updateInterval);
-
-    return () => {
-      gyroSubscription && gyroSubscription.remove();
-    };
-  }, [yaw]);
   useEffect(() => {
     const subscription = Accelerometer.addListener(
       _.debounce(({ x, y, z }) => {
@@ -79,13 +60,6 @@ export default function App() {
           avgPitch >= -5 - adjustment && avgPitch <= 5 + adjustment
         );
 
-        if(avgRoll < 85 - adjustment) {
-          setFeedback('Rotate Clockwise');
-        } else if (avgRoll > 95 + adjustment) {
-          setFeedback('Rotate Counter Clockwise');
-        } else {
-          setFeedback('Good! Hold this position');
-        }
         setTimeout(() => {
           console.log('Smoothed Roll:', avgRoll.toFixed(2), 'Smoothed Pitch:', avgPitch.toFixed(2));
         }, 1000);        
@@ -195,3 +169,5 @@ export default function App() {
           color: 'red',
         },
       });
+
+
