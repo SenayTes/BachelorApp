@@ -1,3 +1,4 @@
+// Necessary modules
 import React, { useState, useEffect, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, TouchableOpacity, Animated } from 'react-native';
@@ -6,6 +7,7 @@ import { Accelerometer } from 'expo-sensors';
 import _ from 'lodash';
 
 export default function App() {
+  // State variables
   const [hasPermission, setHasPermission] = useState(null);
   const [isAt90Degrees, setIsAt90Degrees] = useState(false);
   const [adjustment, setAdjustment] = useState(0);
@@ -18,7 +20,6 @@ export default function App() {
   const [rollBuffer, setRollBuffer] = useState([]);
   const [pitchBuffer, setPitchBuffer] = useState([]);
 
-
   const BUFFER_SIZE = 5; // Use last 5 readings for smoothing
 
   useEffect(() => {
@@ -28,31 +29,39 @@ export default function App() {
     })();
   }, []);
 
+  // Hook to read accelerometer data and update the state accordingly
   useEffect(() => {
+    // Subscribe to accelerometer updates
     const subscription = Accelerometer.addListener(
       _.debounce(({ x, y, z }) => {
+        // Calculate roll and pitch
         const roll = Math.atan2(y, z) * (180 / Math.PI);
         const pitch = Math.atan2(-x, Math.sqrt(y * y + z * z)) * (180 / Math.PI);
 
         // For smoothing
+        // Update the roll and pitch buffers
         let newRollBuffer = [...rollBuffer, roll];
         let newPitchBuffer = [...pitchBuffer, pitch];
         if(newRollBuffer.length > BUFFER_SIZE) newRollBuffer.shift();
         if(newPitchBuffer.length > BUFFER_SIZE) newPitchBuffer.shift();
+        // Calculate averages for smoothing
         const avgRoll = newRollBuffer.reduce((a, b) => a + b) / newRollBuffer.length;
         const avgPitch = newPitchBuffer.reduce((a, b) => a + b) / newPitchBuffer.length;
-
+        // length;
+        // Set the new state
         setRollBuffer(newRollBuffer);
         setPitchBuffer(newPitchBuffer);
         setSmoothedRoll(avgRoll);
         setSmoothedPitch(avgPitch);
 
+        // Animate roll movement
         Animated.timing(rollAnim, {
           toValue: avgRoll,
           duration: 500,
           useNativeDriver: false,
         }).start();
 
+        // Update roll and pitch
         setRoll(avgRoll);
         setPitch(avgPitch);
         setIsAt90Degrees(
@@ -60,10 +69,8 @@ export default function App() {
           avgPitch >= -5 - adjustment && avgPitch <= 5 + adjustment
         );
 
-        setTimeout(() => {
           console.log('Smoothed Roll:', avgRoll.toFixed(2), 'Smoothed Pitch:', avgPitch.toFixed(2));
-        }, 1000);        
-       
+          
       }, 0) // Debounce time in ms
     );
 
