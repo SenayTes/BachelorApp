@@ -1,16 +1,14 @@
-
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, Image, TouchableOpacity, Animated } from 'react-native';
-import Icon from 'react-native-vector-icons/FontAwesome';
-import { useEffect, useRef, useState, useCallback } from 'react';
 import { Camera } from 'expo-camera';
 import { shareAsync } from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Svg, Circle } from 'react-native-svg';
-import { Accelerometer, Gyroscope } from 'expo-sensors';
+import { Accelerometer } from 'expo-sensors';
 import _ from 'lodash';
-//import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 export default function Cameraa() {
   // State variables
@@ -19,20 +17,16 @@ export default function Cameraa() {
   const [hasMediaLibraryPermission, setHasMediaLibraryPermission] = useState();
   const [photo, setPhoto] = useState();
   const [firstCircleRef, setFirstCircleRef] = useState(null);
-  const [secondCircleRef, setSecondCircleRef] = useState(null);
-  const [hasPermission, setHasPermission] = useState(null);
   const [isAt90Degrees, setIsAt90Degrees] = useState(false);
   const [adjustment, setAdjustment] = useState(0);
   const [roll, setRoll] = useState(0);
   const [pitch, setPitch] = useState(0);
-  const [feedback, setFeedback] = useState('');
-  const rollAnim = new Animated.Value(0);
   const [smoothedRoll, setSmoothedRoll] = useState(0);
   const [smoothedPitch, setSmoothedPitch] = useState(0);
   const [rollBuffer, setRollBuffer] = useState([]);
   const [pitchBuffer, setPitchBuffer] = useState([]);
 
-  const BUFFER_SIZE = 5; // Use last 5 readings for smoothing
+  const BUFFER_SIZE = 8; // Use last 5 readings for smoothing
 
   useEffect(() => {
     (async () => {
@@ -42,6 +36,7 @@ export default function Cameraa() {
       setHasMediaLibraryPermission(mediaLibraryPermission.status === "granted");
     })();
   }, []);
+
   // Hook to read accelerometer data and update the state accordingly
   useEffect(() => {
     // Subscribe to accelerometer updates
@@ -58,21 +53,14 @@ export default function Cameraa() {
         if (newRollBuffer.length > BUFFER_SIZE) newRollBuffer.shift();
         if (newPitchBuffer.length > BUFFER_SIZE) newPitchBuffer.shift();
         // Calculate averages for smoothing
+        // Calculate averages for smoothing
         const avgRoll = newRollBuffer.reduce((a, b) => a + b) / newRollBuffer.length;
         const avgPitch = newPitchBuffer.reduce((a, b) => a + b) / newPitchBuffer.length;
-        // length;
         // Set the new state
         setRollBuffer(newRollBuffer);
         setPitchBuffer(newPitchBuffer);
         setSmoothedRoll(avgRoll);
         setSmoothedPitch(avgPitch);
-
-        // Animate roll movement
-        Animated.timing(rollAnim, {
-          toValue: avgRoll,
-          duration: 500,
-          useNativeDriver: false,
-        }).start();
 
         // Update roll and pitch
         setRoll(avgRoll);
@@ -90,36 +78,40 @@ export default function Cameraa() {
     return () => {
       subscription && subscription.remove();
     };
-  }, [adjustment, rollAnim, rollBuffer, pitchBuffer]);
+  }, [adjustment, rollBuffer, pitchBuffer]);
+
+  // If the device is at 90 degrees in both x and y axes, change the line colors to green, otherwise to red
+  const lineStyles = {
+    horizontalLine: {
+      backgroundColor: isAt90Degrees ? 'green' : 'red',
+    },
+    verticalLine: {
+      backgroundColor: isAt90Degrees ? 'green' : 'red',
+    },
+  };
+
 
   const handleCalibratePress = useCallback(() => {
     setAdjustment(0);
   }, []);
 
-  const handleIncreaseAdjustment = useCallback(() => {
-    setAdjustment(adjustment + 1);
-  }, [adjustment]);
+  let takePic = async () => {
+    let options = {
+      quality: 1,
+      base64: true,
+      exif: false,
+      width: 500
+    };
 
-  const handleDecreaseAdjustment = useCallback(() => {
-    setAdjustment(adjustment - 1);
-  }, [adjustment]);
+    let newPhoto = await cameraRef.current.takePictureAsync(options);
+    setPhoto(newPhoto);
+  };
 
   if (hasCameraPermission === undefined) {
     return <Text>Requesting permissions...</Text>
   } else if (!hasCameraPermission) {
     return <Text>Permission not granted</Text>
   }
-
-  let takePic = async () => {
-    let options = {
-      quality: 1,
-      base64: true,
-      exif: false
-    };
-
-    let newPhoto = await cameraRef.current.takePictureAsync(options);
-    setPhoto(newPhoto);
-  };
 
   if (photo) {
     let sharePic = () => {
@@ -160,8 +152,10 @@ export default function Cameraa() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Camera style={{ aspectRatio: '3/4' }} ref={cameraRef}>
-
+      <Camera
+        style={{ aspectRatio: '3/4' }}
+        ref={cameraRef}
+      >
         <View style={styles.circlContainer}>
           <Svg height="100%" width="100%">
             <Circle
@@ -173,33 +167,9 @@ export default function Cameraa() {
               strokeWidth="4"
               ref={setFirstCircleRef}
             />
-            <Circle
-              cx="50%"
-              cy="50%"
-              r="140"
-              fill="none"
-              stroke="none"
-              strokeWidth="4"
-              ref={setSecondCircleRef}
-            />
           </Svg>
-          <Animated.View
-            style={[
-              styles.line,
-              styles.horizontalLine,
-              { backgroundColor: isAt90Degrees ? 'green' : 'red' },
-              {
-                transform: [{
-                  rotateZ: rollAnim.interpolate({
-                    inputRange: [0, 360],
-                    outputRange: ['0deg', '360deg'],
-                  })
-                }]
-              }
-            ]}
-          />
-          <View style={[styles.line, styles.verticalLine, { backgroundColor: isAt90Degrees ? 'green' : 'red' }]} />
-          <Text style={[styles.feedback, isAt90Degrees ? styles.feedbackGood : styles.feedbackAdjust]}>{feedback}</Text>
+          <View style={[styles.line, styles.horizontalLine, lineStyles.horizontalLine]} />
+          <View style={[styles.line, styles.verticalLine, lineStyles.verticalLine]} />
         </View>
         <View style={styles.buttonContainer}>
           <TouchableOpacity
@@ -212,15 +182,9 @@ export default function Cameraa() {
             <TouchableOpacity onPress={handleCalibratePress}>
               <Text>Calibrate</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleIncreaseAdjustment}>
-              <Text>Increase Adjustment</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleDecreaseAdjustment}>
-              <Text>Decrease Adjustment</Text>
-            </TouchableOpacity>
-            </View>
           </View>
-          <StatusBar style="auto" />
+        </View>
+        <StatusBar style="auto" />
       </Camera>
     </SafeAreaView>
   );
@@ -252,8 +216,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   line: {
-    position: 'absolute',
-  },
+    position:'absolute'
+   },
   cameraContainer: {
     flex: 1,
     alignItems: 'center',
@@ -265,10 +229,10 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   circlContainer: {
-    marginTop: 0,
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: -10,
+    marginTop: -20,
   },
   horizontalLine: {
     height: 1,
@@ -288,16 +252,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'white',
   },
-  feedback: {
-    position: 'absolute',
-    bottom: 20,
-    color: 'white',
-    fontSize: 20,
-  },
-  feedbackGood: {
-    color: 'green',
-  },
-  feedbackAdjust: {
-    color: 'red',
-  },
 });
+
