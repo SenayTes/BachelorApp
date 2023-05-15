@@ -26,7 +26,7 @@ export default function Cameraa() {
   const [rollBuffer, setRollBuffer] = useState([]);
   const [pitchBuffer, setPitchBuffer] = useState([]);
 
-  const BUFFER_SIZE = 8; // Use last 5 readings for smoothing
+  const BUFFER_SIZE = 8; // Use last 8 readings for smoothing
 
   useEffect(() => {
     (async () => {
@@ -90,11 +90,6 @@ export default function Cameraa() {
     },
   };
 
-
-  const handleCalibratePress = useCallback(() => {
-    setAdjustment(0);
-  }, []);
-
   let takePic = async () => {
     let options = {
       quality: 1,
@@ -131,7 +126,7 @@ export default function Cameraa() {
     return (
       <SafeAreaView style={styles.container}>
         <Image style={styles.preview} source={{ uri: "data:image/jpg;base64," + photo.base64 }} />
-        <View style={styles.btnContainer}>
+        <View style={styles.btnContainer2}>
           <TouchableOpacity
             onPress={sharePic}>
             <Icon name="share" size={50} color="grey" />
@@ -157,11 +152,11 @@ export default function Cameraa() {
         ref={cameraRef}
       >
         <View style={styles.circlContainer}>
-          <Svg height="100%" width="100%">
+          <Svg height="80%" width="80%">
             <Circle
               cx="50%"
               cy="50%"
-              r="70"
+              r="60"
               fill="none"
               stroke="blue"
               strokeWidth="4"
@@ -171,18 +166,22 @@ export default function Cameraa() {
           <View style={[styles.line, styles.horizontalLine, lineStyles.horizontalLine]} />
           <View style={[styles.line, styles.verticalLine, lineStyles.verticalLine]} />
         </View>
-        <View style={styles.buttonContainer}>
+        <View style={styles.overlayContainer}>
+          <View style={styles.overlayTextContainer}>
+            <Text style={styles.overlayText}>
+              Roll: {roll.toFixed(2)}°
+            </Text>
+            <Text style={styles.overlayText}>
+              Pitch: {pitch.toFixed(2)}°
+            </Text>
+          </View>
+        </View>
+        <View style={styles.btnContainer}>
           <TouchableOpacity
             style={styles.button}
             onPress={takePic}>
             <Icon name="camera" size={50} color="white" />
           </TouchableOpacity>
-          <View style={styles.adjustment}>
-            <Text>Adjustment: {adjustment}</Text>
-            <TouchableOpacity onPress={handleCalibratePress}>
-              <Text>Calibrate</Text>
-            </TouchableOpacity>
-          </View>
         </View>
         <StatusBar style="auto" />
       </Camera>
@@ -199,12 +198,18 @@ const styles = StyleSheet.create({
   buttonContainer: {
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 200,
   },
   btnContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 0,
+  },
+  btnContainer2: {
+    borderRadius: 10,
+    padding: 5,
+    flexDirection: 'row'
   },
   preview: {
     alignSelf: 'stretch',
@@ -216,27 +221,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   line: {
-    position:'absolute'
-   },
+    position: 'absolute',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   cameraContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   button: {
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 0,
+    flex: 1,
+    borderRadius: 0,
+    padding: 0,
+    marginBottom: -20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   circlContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: -10,
-    marginTop: -20,
+    top: 55,
+    marginLeft: 0,
+    marginBottom: 0,
   },
   horizontalLine: {
     height: 1,
-    width: '50%',
+    width: '25%',
     top: '50%',
   },
   verticalLine: {
@@ -244,13 +255,20 @@ const styles = StyleSheet.create({
     width: 1,
     left: '50%',
   },
-  adjustment: {
-    position: 'absolute',
-    bottom: 50,
-    left: 0,
-    right: 0,
+  overlayContainer: {
+    marginLeft: 250,
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'white',
+    marginBottom: 0,
+  },
+  overlayTextContainer: {
+    padding: 10,
+    borderRadius: 5,
+  },
+  overlayText: {
+    color: 'white',
+    fontSize: 16,
+    marginBottom: 5,
   },
 });
 
