@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Button, Image, TouchableOpacity } from 'react-native';
-import { useEffect,useRef, useState } from 'react';
+import { StyleSheet, View, Button, Image } from 'react-native';
+import {useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 
 export default function Gallery() {

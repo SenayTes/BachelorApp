@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Image, TouchableOpacity, Animated } from 'react-native';
+import { StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native';
 import { Camera } from 'expo-camera';
 import { shareAsync } from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
@@ -26,8 +26,9 @@ export default function Cameraa() {
   const [rollBuffer, setRollBuffer] = useState([]);
   const [pitchBuffer, setPitchBuffer] = useState([]);
 
-  const BUFFER_SIZE = 8; // Use last 8 readings for smoothing
+  const BUFFER_SIZE = 8; // Use last 8 readings for smoothing the angle value 
 
+  // Hook to ask user for different permissions needed and update the state variables belonging 
   useEffect(() => {
     (async () => {
       const cameraPermission = await Camera.requestCameraPermissionsAsync();
@@ -37,14 +38,14 @@ export default function Cameraa() {
     })();
   }, []);
 
-  // Hook to read accelerometer data and update the state accordingly
+  // Hook to read accelerometer data and update the state variables belonging
   useEffect(() => {
-    // Subscribe to accelerometer updates
+    // Subscribes for accelerometer updates
     const subscription = Accelerometer.addListener(
       _.debounce(({ x, y, z }) => {
-        // Calculate roll and pitch
-        const roll = Math.atan2(y, z) * (180 / Math.PI);
-        const pitch = Math.atan2(-x, Math.sqrt(y * y + z * z)) * (180 / Math.PI);
+        // Calculating the roll and pitch angles
+        const roll = Math.atan2(-x, Math.sqrt(y * y + z * z)) * (180 / Math.PI);
+        const pitch = Math.atan2(y, z) * (180 / Math.PI);
 
         // For smoothing
         // Update the roll and pitch buffers
@@ -75,12 +76,13 @@ export default function Cameraa() {
       }, 0) // Debounce time in ms
     );
 
+    // Unsubscribes from accelerometer updates to avoid issues such as memory leak
     return () => {
       subscription && subscription.remove();
     };
   }, [adjustment, rollBuffer, pitchBuffer]);
 
-  // If the device is at 90 degrees in both x and y axes, change the line colors to green, otherwise to red
+  // If the requirement for the state variable is satisfied then change the line colors to green, otherwise red
   const lineStyles = {
     horizontalLine: {
       backgroundColor: isAt90Degrees ? 'green' : 'red',
@@ -90,24 +92,26 @@ export default function Cameraa() {
     },
   };
 
+  // Function with configurations of options for picture taken 
   let takePic = async () => {
     let options = {
       quality: 1,
       base64: true,
       exif: false,
-      width: 500
     };
 
+    // Picture gets captured and the state variable setPhoto is updated
     let newPhoto = await cameraRef.current.takePictureAsync(options);
     setPhoto(newPhoto);
   };
 
-  if (hasCameraPermission === undefined) {
-    return <Text>Requesting permissions...</Text>
-  } else if (!hasCameraPermission) {
-    return <Text>Permission not granted</Text>
-  }
+  /*   if (hasCameraPermission === undefined) {
+      return <Text>Requesting permissions...</Text>
+    } else if (!hasCameraPermission) {
+      return <Text>Permission not granted</Text>
+    } */
 
+  // Share the picture taken 
   if (photo) {
     let sharePic = () => {
       shareAsync(photo.uri).then(() => {
@@ -115,6 +119,7 @@ export default function Cameraa() {
       });
     };
 
+    // Saves the picture taken inside the local gallery in own folder
     let savePhoto = async () => {
       if (hasMediaLibraryPermission) {
         const asset = await MediaLibrary.createAssetAsync(photo.uri);
@@ -123,6 +128,7 @@ export default function Cameraa() {
       }
     };
 
+    // Componenets to be rendered on the screen
     return (
       <SafeAreaView style={styles.container}>
         <Image style={styles.preview} source={{ uri: "data:image/jpg;base64," + photo.base64 }} />
@@ -144,7 +150,7 @@ export default function Cameraa() {
       </SafeAreaView>
     );
   }
-
+  // Componenets to be rendered on the screen
   return (
     <SafeAreaView style={styles.container}>
       <Camera
@@ -188,7 +194,7 @@ export default function Cameraa() {
     </SafeAreaView>
   );
 }
-
+// Styling of all the rendered components
 const styles = StyleSheet.create({
   container: {
     flex: 1,
