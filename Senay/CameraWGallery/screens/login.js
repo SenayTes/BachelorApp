@@ -27,15 +27,15 @@ export default function Login({navigation}){
             style={styles.homeLogo}
             source={require('../assets/logo.png')}
             />
-{/*       <Text style={styles.text}> Login </Text>
- */}
-     {/*  <TouchableOpacity
+       <Text style={styles.text}> Login </Text>
+ 
+       <TouchableOpacity
       style={styles.buttonReg}
       onPress={() => navigation.navigate("Register")}>
       <Text style={styles.textReg}> Register </Text>
       </TouchableOpacity>
- */}
-{/*     <TextInput
+
+     <TextInput
         label="Email"
         style={styles.input}
         onChangeText={onChangeText}
@@ -49,7 +49,7 @@ export default function Login({navigation}){
         value={password}
         mode="outlined"
         secureTextEntry
-      /> */}
+      /> 
         <TouchableOpacity
       style={styles.button}
       onPress={() => navigation.navigate("Home")}>
