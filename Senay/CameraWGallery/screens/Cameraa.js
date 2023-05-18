@@ -19,11 +19,11 @@ export default function Cameraa() {
   const [firstCircleRef, setFirstCircleRef] = useState(null);
   const [isAt90Degrees, setIsAt90Degrees] = useState(false);
   const [adjustment, setAdjustment] = useState(0);
-  const [roll, setRoll] = useState(0);
+  const [yaw, setYaw] = useState(0);
   const [pitch, setPitch] = useState(0);
-  const [smoothedRoll, setSmoothedRoll] = useState(0);
+  const [smootedYaw, setSmoothedYaw] = useState(0);
   const [smoothedPitch, setSmoothedPitch] = useState(0);
-  const [rollBuffer, setRollBuffer] = useState([]);
+  const [yawBuffer, setYawBuffer] = useState([]);
   const [pitchBuffer, setPitchBuffer] = useState([]);
 
   const BUFFER_SIZE = 8; // Use last 8 readings for smoothing the angle value 
@@ -43,35 +43,35 @@ export default function Cameraa() {
     // Subscribes for accelerometer updates
     const subscription = Accelerometer.addListener(
       _.debounce(({ x, y, z }) => {
-        // Calculating the roll and pitch angles
-        const roll = Math.atan2(-x, Math.sqrt(y * y + z * z)) * (180 / Math.PI);
+        // Calculating the yaw and pitch angles
+        const yaw = Math.atan2(-x, Math.sqrt(y * y + z * z)) * (180 / Math.PI);
         const pitch = Math.atan2(y, z) * (180 / Math.PI);
 
         // For smoothing
-        // Update the roll and pitch buffers
-        let newRollBuffer = [...rollBuffer, roll];
+        // Update the yaw and pitch buffers
+        let newYawBuffer = [...yawBuffer, yaw];
         let newPitchBuffer = [...pitchBuffer, pitch];
-        if (newRollBuffer.length > BUFFER_SIZE) newRollBuffer.shift();
+        if (newYawBuffer.length > BUFFER_SIZE) newYawBuffer.shift();
         if (newPitchBuffer.length > BUFFER_SIZE) newPitchBuffer.shift();
         // Calculate averages for smoothing
         // Calculate averages for smoothing
-        const avgRoll = newRollBuffer.reduce((a, b) => a + b) / newRollBuffer.length;
+        const avgYaw = newYawBuffer.reduce((a, b) => a + b) / newYawBuffer.length;
         const avgPitch = newPitchBuffer.reduce((a, b) => a + b) / newPitchBuffer.length;
         // Set the new state
-        setRollBuffer(newRollBuffer);
+        setYawBuffer(newYawBuffer);
         setPitchBuffer(newPitchBuffer);
-        setSmoothedRoll(avgRoll);
+        setSmoothedYaw(avgYaw);
         setSmoothedPitch(avgPitch);
 
-        // Update roll and pitch
-        setRoll(avgRoll);
+        // Update yaw and pitch
+        setYaw(avgYaw);
         setPitch(avgPitch);
         setIsAt90Degrees(
-          avgRoll >= 85 - adjustment && avgRoll <= 95 + adjustment &&
-          avgPitch >= -5 - adjustment && avgPitch <= 5 + adjustment
+          avgPitch >= 85 - adjustment && avgPitch <= 95 + adjustment &&
+          avgYaw >= -5 - adjustment && avgYaw <= 5 + adjustment
         );
 
-        console.log('Smoothed Roll:', avgRoll.toFixed(2), 'Smoothed Pitch:', avgPitch.toFixed(2));
+        console.log('Smoothed Yaw:', avgYaw.toFixed(2), 'Smoothed Pitch:', avgPitch.toFixed(2));
 
       }, 0) // Debounce time in ms
     );
@@ -80,7 +80,7 @@ export default function Cameraa() {
     return () => {
       subscription && subscription.remove();
     };
-  }, [adjustment, rollBuffer, pitchBuffer]);
+  }, [adjustment, yawBuffer, pitchBuffer]);
 
   // If the requirement for the state variable is satisfied then change the line colors to green, otherwise red
   const lineStyles = {
@@ -175,7 +175,7 @@ export default function Cameraa() {
         <View style={styles.overlayContainer}>
           <View style={styles.overlayTextContainer}>
             <Text style={styles.overlayText}>
-              Roll: {roll.toFixed(2)}°
+              Yaw: {yaw.toFixed(2)}°
             </Text>
             <Text style={styles.overlayText}>
               Pitch: {pitch.toFixed(2)}°
