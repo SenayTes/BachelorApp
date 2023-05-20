@@ -1,14 +1,14 @@
 import { StyleSheet, Text, View, Button, Image, TouchableOpacity,SafeAreaView, ImageBackground} from 'react-native';
 import React from 'react';
 import { TextInput } from 'react-native-paper';
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+//import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 
 export default function Register({navigation}){
   const [email, onChangeText] = React.useState('');
   const [password, onChangeNumber] = React.useState('');
-  const auth = getAuth();
+  //const auth = getAuth();
 
-  const handleRegister = async () => {
+  /* const handleRegister = async () => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       console.log('User registered successfully:', userCredential.user.uid);
@@ -18,7 +18,7 @@ export default function Register({navigation}){
       console.log('Error registering user:', error);
       // Show an error message to the user
     }
-  };    
+  };     */
   
   return(
     <SafeAreaView style={{flex: 1, justifyContent: 'center' , alignItems: 'center'}}>
@@ -48,7 +48,7 @@ export default function Register({navigation}){
       />
        <TouchableOpacity
         style={styles.button}
-        onPress={ handleRegister}>
+        onPress={ " "}>
         <Text style={styles.textLog}> Create account </Text>
         </TouchableOpacity>
       </ImageBackground>

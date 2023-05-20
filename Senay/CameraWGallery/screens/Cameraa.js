@@ -162,7 +162,7 @@ export default function Cameraa() {
             <Circle
               cx="50%"
               cy="50%"
-              r="60"
+              r="70"
               fill="none"
               stroke="blue"
               strokeWidth="4"
