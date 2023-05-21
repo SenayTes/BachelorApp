@@ -2,6 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View, TouchableOpacity, Image, ImageBackground} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome'
 
+
 export default function Home({navigation}) {
   return (
     <ImageBackground

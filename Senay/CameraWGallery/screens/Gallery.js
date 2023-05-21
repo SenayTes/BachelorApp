@@ -6,8 +6,8 @@ import * as ImagePicker from 'expo-image-picker';
 export default function Gallery() {
   const [image, setImage] = useState(null);
 
+  // Uses the ImagePicker component from the corresponding library to access the image library in the phone
   const pickImage = async () => {
-    // No permissions request is necessary for launching the image library
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: false,

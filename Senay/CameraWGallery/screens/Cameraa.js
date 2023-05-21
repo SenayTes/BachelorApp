@@ -18,7 +18,6 @@ export default function Cameraa() {
   const [photo, setPhoto] = useState();
   const [firstCircleRef, setFirstCircleRef] = useState(null);
   const [isAt90Degrees, setIsAt90Degrees] = useState(false);
-  const [adjustment, setAdjustment] = useState(0);
   const [yaw, setYaw] = useState(0);
   const [pitch, setPitch] = useState(0);
   const [smootedYaw, setSmoothedYaw] = useState(0);
@@ -38,51 +37,60 @@ export default function Cameraa() {
     })();
   }, []);
 
-  // Hook to read accelerometer data and update the state variables belonging
   useEffect(() => {
     // Subscribes for accelerometer updates
-    const subscription = Accelerometer.addListener(
-      _.debounce(({ x, y, z }) => {
-        // Calculating the yaw and pitch angles
-        const yaw = Math.atan2(-x, Math.sqrt(y * y + z * z)) * (180 / Math.PI);
-        const pitch = Math.atan2(y, z) * (180 / Math.PI);
+    const subscription = Accelerometer.addListener(({ x, y, z }) => {
+      // Calculating the yaw and pitch angles
+      const yaw = Math.atan2(-x, Math.sqrt(y * y + z * z)) * (180 / Math.PI);
+      const pitch = Math.atan2(y, z) * (180 / Math.PI);
+  
+      // For smoothing
 
-        // For smoothing
-        // Update the yaw and pitch buffers
-        let newYawBuffer = [...yawBuffer, yaw];
-        let newPitchBuffer = [...pitchBuffer, pitch];
-        if (newYawBuffer.length > BUFFER_SIZE) newYawBuffer.shift();
-        if (newPitchBuffer.length > BUFFER_SIZE) newPitchBuffer.shift();
-        // Calculate averages for smoothing
-        // Calculate averages for smoothing
-        const avgYaw = newYawBuffer.reduce((a, b) => a + b) / newYawBuffer.length;
-        const avgPitch = newPitchBuffer.reduce((a, b) => a + b) / newPitchBuffer.length;
-        // Set the new state
-        setYawBuffer(newYawBuffer);
-        setPitchBuffer(newPitchBuffer);
-        setSmoothedYaw(avgYaw);
-        setSmoothedPitch(avgPitch);
+      // Creates a new empty array and fills it with yaw values continously
+      let newYawBuffer = [...yawBuffer, yaw];
+      // Creates a new empty array and fills it with pitch values continously
+      let newPitchBuffer = [...pitchBuffer, pitch];
 
-        // Update yaw and pitch
-        setYaw(avgYaw);
-        setPitch(avgPitch);
-        setIsAt90Degrees(
-          avgPitch >= 85 - adjustment && avgPitch <= 95 + adjustment &&
-          avgYaw >= -5 - adjustment && avgYaw <= 5 + adjustment
-        );
+      // Checks if the corresponding new array has more values than the set buffer size, and if so the latest value will be removed
+      if (newYawBuffer.length > BUFFER_SIZE) newYawBuffer.shift();
 
-        console.log('Smoothed Yaw:', avgYaw.toFixed(2), 'Smoothed Pitch:', avgPitch.toFixed(2));
-
-      }, 0) // Debounce time in ms
-    );
-
+      // Checks if the new array with the buffer value is larger than the set buffer size, and if so the latest value will be removed
+      if (newPitchBuffer.length > BUFFER_SIZE) newPitchBuffer.shift();
+  
+      // Calculate averages of the array of values 
+      const avgYaw = newYawBuffer.reduce((a, b) => a + b) / newYawBuffer.length;
+      const avgPitch = newPitchBuffer.reduce((a, b) => a + b) / newPitchBuffer.length;
+  
+      // Updates the values of the corresponding state variables 
+      setYawBuffer(newYawBuffer);
+      setPitchBuffer(newPitchBuffer);
+      setSmoothedYaw(avgYaw);
+      setSmoothedPitch(avgPitch);
+  
+      // Update the values of the corresponding state variables
+      setYaw(avgYaw);
+      setPitch(avgPitch);
+  
+      // A check for if the phone is oriented correctly in the yaw and pitch angles
+      setIsAt90Degrees(
+        avgPitch >= 85  && avgPitch <= 95 &&
+        avgYaw >= -5  && avgYaw <= 5
+      );
+  
+      // For debugging purposes
+      console.log('Yaw:', avgYaw.toFixed(2), 'Pitch:', avgPitch.toFixed(2));
+  
+    });
+  
     // Unsubscribes from accelerometer updates to avoid issues such as memory leak
     return () => {
       subscription && subscription.remove();
     };
-  }, [adjustment, yawBuffer, pitchBuffer]);
+      // The useeffect function will be run again when yawBuffer or Pitchbuffer changes
+  }, [yawBuffer, pitchBuffer]); 
+  
 
-  // If the requirement for the state variable is satisfied then change the line colors to green, otherwise red
+  // If the requirement for the state variable is satisfied then change the line colors to green, otherwise stay red
   const lineStyles = {
     horizontalLine: {
       backgroundColor: isAt90Degrees ? 'green' : 'red',
@@ -105,12 +113,6 @@ export default function Cameraa() {
     setPhoto(newPhoto);
   };
 
-  /*   if (hasCameraPermission === undefined) {
-      return <Text>Requesting permissions...</Text>
-    } else if (!hasCameraPermission) {
-      return <Text>Permission not granted</Text>
-    } */
-
   // Share the picture taken 
   if (photo) {
     let sharePic = () => {
@@ -119,7 +121,7 @@ export default function Cameraa() {
       });
     };
 
-    // Saves the picture taken inside the local gallery in own folder
+    // Saves the picture taken inside the local gallery in own folder, voluntarary folder
     let savePhoto = async () => {
       if (hasMediaLibraryPermission) {
         const asset = await MediaLibrary.createAssetAsync(photo.uri);
@@ -150,6 +152,7 @@ export default function Cameraa() {
       </SafeAreaView>
     );
   }
+
   // Componenets to be rendered on the screen
   return (
     <SafeAreaView style={styles.container}>
@@ -162,7 +165,7 @@ export default function Cameraa() {
             <Circle
               cx="50%"
               cy="50%"
-              r="70"
+              r="60"
               fill="none"
               stroke="blue"
               strokeWidth="4"
