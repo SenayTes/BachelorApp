@@ -7,7 +7,6 @@ import * as MediaLibrary from 'expo-media-library';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Svg, Circle } from 'react-native-svg';
 import { Accelerometer } from 'expo-sensors';
-import _ from 'lodash';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 export default function Cameraa() {

@@ -16,7 +16,7 @@ export default function ImagePickerExample() {
     })();
   }, []);
 
-  const pickImage = async () => {
+  const pickImg = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: true,
@@ -29,7 +29,7 @@ export default function ImagePickerExample() {
     }
   };
 
-  const takeImage = async () => {
+  const takeImg = async () => {
     let result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: true,
@@ -44,8 +44,8 @@ export default function ImagePickerExample() {
 
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Button title="Pick an image from camera roll" onPress={pickImage} />
-      <Button title="Take a photo" onPress={takeImage} />
+      <Button title="Pick an image from camera roll" onPress={pickImg} />
+      <Button title="Take a photo" onPress={takeImg} />
       {image && <Image source={{ uri: image }} style={{ width: 200, height: 200 }} />}
     </View>
   );
